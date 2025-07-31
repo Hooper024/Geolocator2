@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Distance Checker | Interactive Map Tool</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    background-color: #f0f2f5; /* Softer background */
+    color: #2c3e50;
+    line-height: 1.6;
+    padding: 0;
+}
+
+h3 {
+    color: #2c3e50;
+    font-weight: 500;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+#map {
+    height: 70vh;
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+#controls, #distances {
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+#controls:hover, #distances:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+input {
+    margin-right: 10px;
+    padding: 10px 12px;
+    border: 1px solid #dde1e7;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+select {
+    padding: 10px 12px;
+    border: 1px solid #dde1e7;
+    border-radius: 6px;
+    margin-right: 10px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+button {
+    padding: 10px 16px;
+    background-color: #3498db; /* Nicer blue */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+li {
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    transition: transform 0.1s;
+}
+
+li:hover {
+    transform: translateX(2px);
+}
+
+.red {
+    color: #e74c3c;
+    border-left: 3px solid #e74c3c;
+    padding-left: 10px;
+}
+
+.green {
+    color: #27ae60;
+    border-left: 3px solid #27ae60;
+    padding-left: 10px;
+}
+
+/* Style the Leaflet map controls */
+.leaflet-control-zoom, .leaflet-control-attribution {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.leaflet-control-zoom a {
+    font-weight: bold;
+    color: #3498db;
+}
+
+/* Make the map markers more visible */
+
+/* Make the map markers more visible */
+.leaflet-marker-icon {
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #controls input, #controls button, #controls select {
+        margin-bottom: 10px;
+        width: 100%;
+    }
+    
+    .container {
+        padding: 10px;
+    }
+    
+    #map {
+        height: 60vh;
+    }
+    
+    #statsContent {
+        flex-direction: column;
+    }
+    
+    #statsContent > div {
+        margin-bottom: 15px;
+    }
+    
+    h3 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #controls, #distances, #stats {
+        padding: 15px 10px;
+    }
+    
+    li {
+        font-size: 0.9rem;
+    }
+}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div id="controls">
+      <h3>Add / Remove Point</h3>
+      <div style="margin-bottom: 15px;">
+        <input type="number" step="any" id="latInput" placeholder="Latitude">
+        <input type="number" step="any" id="lngInput" placeholder="Longitude">
+        <button onclick="addNewPoint()">Add Point</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;">
+        <button onclick="document.getElementById('importFile').click()">Import Points</button>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <select id="deleteSelect"></select>
+        <button onclick="deleteSelectedPoint()">Delete Selected Point</button>
+        <button onclick="clearAllPoints()" style="background-color: #e74c3c; margin-left: 10px;">Clear All Points</button>
+        <button onclick="exportPoints()" style="background-color: #3498db; margin-left: 10px;">Export Points</button>
+      </div>
+      <div>
+        <label for="mapStyle">Map Style:</label>
+        <select id="mapStyle" onchange="changeMapStyle(this.value)">
+          <option value="streets">Streets</option>
+          <option value="satellite">Satellite</option>
+        </select>
+      </div>
+    </div>
+    <div id="map"></div>
+    <div id="stats" style="padding: 20px; background-color: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); transition: box-shadow 0.3s ease;">
+      <h3>Statistics</h3>
+      <div id="statsContent" style="display: flex; flex-wrap: wrap; gap: 20px;">
+        <div style="flex: 1; min-width: 150px;">
+          <p><strong>Total Points:</strong> <span id="totalPoints">0</span></p>
+          <p><strong>Total Connections:</strong> <span id="totalConnections">0</span></p>
+        </div>
+        <div style="flex: 1; min-width: 150px;">
+          <p><strong>Min Distance:</strong> <span id="minDistance">-</span></p>
+          <p><strong>Max Distance:</strong> <span id="maxDistance">-</span></p>
+        </div>
+        <div style="flex: 1; min-width: 150px;">
+          <p><strong>Avg Distance:</strong> <span id="avgDistance">-</span></p>
+          <p><strong>Critical Connections:</strong> <span id="criticalConnections">0</span></p>
+        </div>
+      </div>
+    </div>
+    <div id="distances">
+      <h3>Distances Between All Points</h3>
+      <ul id="distanceList"></ul>
+    </div>
+  </div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    let allPoints = [
+  { name: "Point 1", lat: -8.139957, lng: 36.669067 },
+  { name: "Point 2", lat: -8.136673, lng: 36.664277 },
+  { name: "Point 3", lat: -8.134107, lng: 36.669272 },
+  { name: "Point 4", lat: -8.127067, lng: 36.668128 },
+  { name: "Point 5", lat: -8.147755, lng: 36.669503 },
+  { name: "Point 6", lat: -8.152952, lng: 36.668628 },
+  { name: "Point 7", lat: -8.16065, lng: 36.671715 },
+  { name: "Point 8", lat: -8.145208, lng: 36.664078 },
+  { name: "Point 9", lat: -8.140587, lng: 36.658875 },
+  { name: "Point 10", lat: -8.144478, lng: 36.655602 },
+  { name: "Point 11", lat: -8.152707, lng: 36.65118 },
+  { name: "Point 12", lat: -8.14853, lng: 36.646268 },
+  { name: "Point 13", lat: -8.144678, lng: 36.637868 },
+  { name: "Point 14", lat: -8.14199, lng: 36.646127 },
+  { name: "Point 15", lat: -8.131433, lng: 36.645023 },
+  { name: "Point 16", lat: -8.135677, lng: 36.684902 },
+  { name: "Point 17", lat: -8.141285, lng: 36.678193 },
+  { name: "Point 18", lat: -8.146768, lng: 36.679448 },
+  { name: "Point 19", lat: -8.129183, lng: 36.675567 },
+  { name: "Point 20", lat: -8.133372, lng: 36.679662 },
+  { name: "Point 21", lat: -8.118925, lng: 36.683908 },
+  { name: "Point 22", lat: -8.122098, lng: 36.676527 },
+  { name: "Point 23", lat: -8.126647, lng: 36.682575 },
+  { name: "Point 24", lat: -8.124133, lng: 36.69217 },
+  { name: "Point 25", lat: -8.128393, lng: 36.69712 },
+  { name: "Point 26", lat: -8.09519, lng: 36.59895 },
+  { name: "Point 27", lat: -8.091442, lng: 36.584242 },
+  { name: "Point 28", lat: -8.088058, lng: 36.565937 },
+  { name: "Point 29", lat: -8.089595, lng: 36.571963 },
+  { name: "Point 30", lat: -8.095883, lng: 36.576907 },
+  { name: "Point 31", lat: -8.095608, lng: 36.605252 },
+  { name: "Point 32", lat: -8.10159, lng: 36.610892 },
+  { name: "Point 33", lat: -8.141377, lng: 36.704998 },
+  { name: "Point 34", lat: -8.149758, lng: 36.695585 },
+  { name: "Point 35", lat: -8.145618, lng: 36.692782 },
+  { name: "Point 36", lat: -8.145273, lng: 36.698802 },
+  { name: "Point 37", lat: -8.164807, lng: 36.681247 },
+  { name: "Point 38", lat: -8.160658, lng: 36.68477 },
+  { name: "Point 39", lat: -8.15237, lng: 36.683132 },
+  { name: "Point 40", lat: -8.147742, lng: 36.685317 },
+  { name: "Point 41", lat: -8.151388, lng: 36.689433 },
+  { name: "Point 42", lat: -8.140122, lng: 36.695068 }
+];
+    const markers = [];
+    const lines = [];
+    function haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+    // Define map tile layers
+    const mapLayers = {
+      streets: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      })
+    };
+    
+    // Initialize the map with streets layer
+    const map = L.map('map', {
+      zoomControl: false,
+      attributionControl: true,
+      layers: [mapLayers.streets] // Default layer
+    }).setView([-8.14, 36.67], 13);
+    
+    // Add custom zoom control in a better position
+    L.control.zoom({
+      position: 'bottomright'
+    }).addTo(map);
+    
+    // Function to change map style
+    function changeMapStyle(style) {
+      // Remove all layers
+      Object.values(mapLayers).forEach(layer => {
+        if (map.hasLayer(layer)) {
+          map.removeLayer(layer);
+        }
+      });
+      
+      // Add selected layer
+      mapLayers[style].addTo(map);
+    }
+    function addMarker(p) {
+      // Use the default Leaflet marker icon (the original location symbol)
+      const marker = L.marker([p.lat, p.lng]).addTo(map);
+      
+      // Create a popup with Google Maps link
+      marker.bindPopup(
+        `<div style="font-family: 'Roboto', sans-serif; padding: 5px;">
+          <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" style="color: #3498db; text-decoration: none; font-weight: 500;">
+            ${p.name}
+          </a><br>
+          <span style="color: #7f8c8d; font-size: 0.9em;">(${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})</span>
+        </div>`,
+        {closeButton: false}
+      );
+      
+      markers.push(marker);
+    }
+    function updateDropdown() {
+      const select = document.getElementById("deleteSelect");
+      select.innerHTML = "";
+      allPoints.forEach((p, idx) => {
+        const option = document.createElement("option");
+        option.value = idx;
+        option.textContent = p.name;
+        select.appendChild(option);
+      });
+    }
+    // Function to calculate statistics
+    function calculateStats() {
+      const distances = [];
+      let criticalCount = 0;
+      
+      // Calculate all distances
+      for (let i = 0; i < allPoints.length; i++) {
+        for (let j = i + 1; j < allPoints.length; j++) {
+          const p1 = allPoints[i];
+          const p2 = allPoints[j];
+          const d = haversine(p1.lat, p1.lng, p2.lat, p2.lng);
+          distances.push(d);
+          
+          if (d < 0.5) criticalCount++;
+        }
+      }
+      
+      // Update statistics in the UI
+      document.getElementById('totalPoints').textContent = allPoints.length;
+      document.getElementById('totalConnections').textContent = distances.length;
+      document.getElementById('criticalConnections').textContent = criticalCount;
+      
+      if (distances.length > 0) {
+        const min = Math.min(...distances);
+        const max = Math.max(...distances);
+        const avg = distances.reduce((sum, d) => sum + d, 0) / distances.length;
+        
+        document.getElementById('minDistance').textContent = min.toFixed(3) + ' km';
+        document.getElementById('maxDistance').textContent = max.toFixed(3) + ' km';
+        document.getElementById('avgDistance').textContent = avg.toFixed(3) + ' km';
+      } else {
+        document.getElementById('minDistance').textContent = '-';
+        document.getElementById('maxDistance').textContent = '-';
+        document.getElementById('avgDistance').textContent = '-';
+      }
+    }
+    
+    function drawLinesAndDistances() {
+      const ul = document.getElementById("distanceList");
+      ul.innerHTML = "";
+      lines.forEach(line => map.removeLayer(line));
+      lines.length = 0;
+      for (let i = 0; i < allPoints.length; i++) {
+        for (let j = i + 1; j < allPoints.length; j++) {
+          const p1 = allPoints[i];
+          const p2 = allPoints[j];
+          const d = haversine(p1.lat, p1.lng, p2.lat, p2.lng);
+          const color = d < 0.5 ? 'red' : 'green';
+          const li = document.createElement("li");
+          li.textContent = `${p1.name} ↔️ ${p2.name}: ${d.toFixed(3)} km`;
+          li.className = color;
+          ul.appendChild(li);
+          // Create more attractive lines with animation effect
+          const line = L.polyline([[p1.lat, p1.lng], [p2.lat, p2.lng]], {
+            color: color === 'red' ? '#e74c3c' : '#27ae60',
+            weight: 2,
+            opacity: 0.7,
+            dashArray: d < 0.5 ? '5, 5' : '',
+            className: 'animated-line'
+          }).addTo(map);
+          
+          // Enhanced popup for lines
+          line.bindPopup(
+            `<div style="font-family: 'Roboto', sans-serif; padding: 5px; text-align: center;">
+              <strong style="color: ${color === 'red' ? '#e74c3c' : '#27ae60'};">${p1.name} ↔️ ${p2.name}</strong><br>
+              <span style="font-size: 1.1em; font-weight: 500;">${d.toFixed(3)} km</span>
+              ${d < 0.5 ? '<br><span style="color: #e74c3c; font-size: 0.9em;">⚠️ Distance below threshold</span>' : ''}
+            </div>`,
+            {closeButton: false}
+          );
+          lines.push(line);
+        }
+      }
+      
+      // Update statistics
+      calculateStats();
+    }
+    function addNewPoint() {
+      if (allPoints.length >= 97) {
+        alert("Maximum of 97 points reached.");
+        return;
+      }
+      const lat = parseFloat(document.getElementById("latInput").value);
+      const lng = parseFloat(document.getElementById("lngInput").value);
+      if (isNaN(lat) || isNaN(lng)) {
+        alert("Please enter valid coordinates.");
+        return;
+      }
+      const name = `Point ${allPoints.length + 1}`;
+      const newPoint = { name, lat, lng };
+      allPoints.push(newPoint);
+      addMarker(newPoint);
+      updateDropdown();
+      drawLinesAndDistances();
+      document.getElementById("latInput").value = '';
+      document.getElementById("lngInput").value = '';
+    }
+    function deleteSelectedPoint() {
+      const select = document.getElementById("deleteSelect");
+      const index = parseInt(select.value);
+      if (isNaN(index)) return;
+      map.removeLayer(markers[index]);
+      markers.splice(index, 1);
+      allPoints.splice(index, 1);
+      updateDropdown();
+      drawLinesAndDistances();
+    }
+    function clearAllPoints() {
+      // Confirm before clearing all points
+      if (confirm("Are you sure you want to clear all points?")) {
+        // Remove all markers from the map
+        markers.forEach(marker => map.removeLayer(marker));
+        
+        // Remove all lines from the map
+        lines.forEach(line => map.removeLayer(line));
+        
+        // Clear arrays
+        markers.length = 0;
+        lines.length = 0;
+        allPoints.length = 0;
+        
+        // Update UI
+        updateDropdown();
+        document.getElementById("distanceList").innerHTML = "";
+        calculateStats(); // Update statistics
+      }
+    }
+    
+    
+    // Import functionality
+    document.getElementById('importFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedPoints = JSON.parse(e.target.result);
+          
+          // Validate the imported data
+          if (!Array.isArray(importedPoints)) {
+            throw new Error('Invalid format: Expected an array of points');
+          }
+          
+          // Clear existing points if there are any
+          if (allPoints.length > 0 && confirm('Replace existing points?')) {
+            clearAllPoints();
+          }
+          
+          // Add imported points
+          importedPoints.forEach(point => {
+            if (typeof point.lat === 'number' && typeof point.lng === 'number') {
+              const name = point.name || `Point ${allPoints.length + 1}`;
+              const newPoint = { name, lat: point.lat, lng: point.lng };
+              allPoints.push(newPoint);
+              addMarker(newPoint);
+            }
+          });
+          
+          updateDropdown();
+          drawLinesAndDistances();
+          alert(`Successfully imported ${importedPoints.length} points.`);
+        } catch (error) {
+          alert(`Error importing points: ${error.message}`);
+        }
+        
+        // Reset the file input
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+    
+    // Export functionality
+    function exportPoints() {
+      if (allPoints.length === 0) {
+        alert('No points to export.');
+        return;
+      }
+      
+      const dataStr = JSON.stringify(allPoints, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = 'distance_checker_points.json';
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+    }
+    
+    allPoints.forEach(addMarker);
+    updateDropdown();
+    drawLinesAndDistances();
+  </script>
+</body>
+</html>
