@@ -6,25 +6,21 @@ Built with [Leaflet.js](https://leafletjs.com/), this tool helps you visually un
 
 ---
 
-## 🔧 Features
+## Features
 
-- 📍 Plots 42 predefined GPS points on an interactive map
-- 🧭 Draws red lines between selected point pairs ≥ 500 meters apart
-- 💬 Displays real-time distance information in popups
-- 🧩 Tooltips with permanent point IDs for easier identification
-- ⚡ 100% client-side — no backend required
-
----
-
-## 🗺️ Demo Preview
-
-Each blue dot represents a point with an ID label. Red lines connect pairs that are at least 500m apart, with distance shown on click.
+- Plots 42 predefined GPS points on an interactive map
+- Draws red lines between selected point pairs ≥ 500 meters apart
+- Displays real-time distance information in popups
+- Tooltips with permanent point IDs for easier identification
+- 100% client-side — no backend required
+- Gives client power to add and remove GPS point locations as per requirement.
 
 ---
 
-## 🚀 How to Run
+## Demo Preview
 
-1. **Clone this repository**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-   cd YOUR_REPO_NAME
+Each blue dot represents a point with an ID label. Red lines show points under the threshold and green lines show the points which meet the cliteria. The distance is shown on clicking.
+
+---
+
+
