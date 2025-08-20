@@ -9,7 +9,7 @@ Built with [Leaflet.js](https://leafletjs.com/), this tool helps you visually un
 ## Features
 
 - Plots 42 predefined GPS points on an interactive map
-- Draws red lines between selected point pairs ≥ 500 meters apart
+- Draws red lines between selected point pairs < 500 meters apart
 - Displays real-time distance information in popups
 - Tooltips with permanent point IDs for easier identification
 - 100% client-side — no backend required
